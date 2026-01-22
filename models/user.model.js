@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
+import Cart from "./cart.model.js";
 const userSchema =new mongoose.Schema(
     {
         name:{ type: String,required:true},
@@ -12,8 +14,7 @@ const userSchema =new mongoose.Schema(
         },
         role:{type:String ,enum:["user","admin"],default:"user"},
         isActive: { type: Boolean, default: true },
-        hobbies: [{ type: String }],
-        posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
+        cartId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Cart" }],
 },{
     timestamps:true,
 }
