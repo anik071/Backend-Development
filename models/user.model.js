@@ -15,7 +15,6 @@ const userSchema =new mongoose.Schema(
         },
         role:{type:String ,enum:["user","admin"],default:"user"},
         isActive: { type: Boolean, default: true },
-        cartId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Cart" }],
 },{
     timestamps:true,
 }
