@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { string } from "zod";
 import { required } from "zod/mini";
+import User from "./user.model.js";
+import Product from "./product.model.js";
 const cartSchema = new mongoose.Schema(
     {
         userID: {
@@ -18,11 +20,11 @@ const cartSchema = new mongoose.Schema(
                         
                     }
                 ],
-        totalPrice:{type:Number,required:true},
+        totalPrice:{type:Number,default:0},
         status: {
-            type:string,
+            type:String,
             enum:["active","ordered","cancelled"],
-            required:true,
+            default:"active"
         }
     },
     { timestamps:true}
