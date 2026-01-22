@@ -26,4 +26,10 @@ userSchema.pre('save',async function(){
 userSchema.methods.comparePassword=async function (enteredPass) {
     return await bcrypt.compare(enteredPass,this.password);
 }
+userSchema.pre('findOneAndUpdate',async function(){
+    const update=this.getUpdate();
+    if(update.password){
+        update.password=await bcrypt.hash(update.password,await bcrypt.genSalt(10));
+    }
+})
 export default mongoose.model("User",userSchema);
