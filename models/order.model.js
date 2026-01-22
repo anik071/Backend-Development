@@ -1,25 +1,23 @@
 import mongoose, { Types } from "mongoose";
 import { object } from "zod";
 import { required } from "zod/mini";
-
+import User from "./user.model.js";
+import Cart from "./cart.model.js";
 const orderSchema = new mongoose.Schema(
     {
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            required: true,
         },
         items: [
             {
-                productId: {
+                Cart: {
                     type: mongoose.Schema.Types.ObjectId,
-                    ref: 'Product',
+                    ref: 'Cart',
                 },
-                quantity: { type: Number, default: 1 },
-                price: { type: Number, required: true, default: 0.0 }
             }
         ],
-        totalAmount: { type: Number, required: true },
+        totalAmount: { type: Number },
         shippingAddress: {
         street: { type: String },
         city: { type: String },
