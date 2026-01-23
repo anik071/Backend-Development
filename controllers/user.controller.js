@@ -183,6 +183,8 @@ if (req.body.address) {
 
 export const deleteProfile=async(req,res)=>{
     try {
+         const cart=await Cart.findOne({userID:req.user._id});
+        await Cart.findByIdAndDelete(cart._id)
         await User.findByIdAndDelete(req.user._id);
         res.status(200).json({
             success:true,
