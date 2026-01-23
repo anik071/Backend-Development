@@ -1,20 +1,10 @@
 import Product from "../models/product.model.js";
 import {z} from 'zod';
 
-const productValidator = z.object({
-  name: z.string().min(2, "Product name too short"),
-  price: z.number().positive("Price must be positive"),
-  stock: z.number().int().nonnegative(),
-  category: z.string().optional(),
-  description: z.string().optional(),
-  isAvailable: z.boolean().default(true),
-  imageUrl: z.string().optional()
-});
 export const getProducts= async(req,res)=>{
     try {
         const products = await Product.find();
         res.status(200).json(products);
-
     } catch (error) {
         res.status(500).json({message:"Error fetching products", error:error.message});
     }
@@ -22,40 +12,106 @@ export const getProducts= async(req,res)=>{
 
 export const getProduct= async(req,res)=>{
     try {
-        const pid=req.params.id;
-        const product = await Product.findById(pid);
-        if(!product)return res.status(404).json({ message: "User not found" });
-        res.status(200).json(product);
-    } catch (error) {
-        res.status(500).json({message:"Error fetching products", error:error.message});
-    }
-}
-
+        const {keyword = "",category,minPrice,maxPrice,page = 1,limit = 10} = req.query;
+        let query = {};
+        if(keyword){
+            query.$or=[
+                {name:{$regex:keyword,$options:"i"}},
+                {description:{$regex:keyword,$options:"i"}}
+            ]
+        }
+        if(category){
+            query.category=category
+        }
+        if(minPrice || maxPrice){
+            query.price={};
+            if(minPrice)query.price.$gte = Number(minPrice);
+            if(maxPrice)query.price.$lte = Number(maxPrice);
+        }
+        const skip =(page-1)*limit;
+        const products=await Product.find(query)
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({createdAt:-1})
+        const total = await Product.countDocuments(query);
+        res.status(200).json({
+        success: true,
+        total,
+        page: Number(page),
+        pages: Math.ceil(total / limit),
+        data:{products}
+        });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Product search failed",
+      error: error.message
+    });
+  }
+};
 export const createProduct= async(req,res)=>{
     try {
-        const parseProduct = productValidator.parse(req.body);
-        const product=await Product.create(parseProduct);
-        res.status(201).json(product);
-    } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({ errors: error.errors });
+        const {name,price,description,category,stock,isAvailable,imageUrl}=req.body;
+        const prod={
+            name : name,
+            price : price,
+            description:description,
+            category:category,
+            stock:stock || 1,
+            isAvailable: isAvailable || true
         }
-         res.status(500).json({message:"Error Creating products", error:error.message});
+        if(imageUrl){
+            prod.imageUrl=imageUrl
+        }
+        const product=await Product.create({prod})
+        res.status(201).json({
+        success: true,
+        message: "Product created successfully",
+        data:{
+            prod
+        }
+    });
+    } catch (error) {
+        res.status(500).json({
+        success: false,
+        message: "Product Create failed",
+        error: error.message
+    });
     }
 }
 
-export const updateProduct= async(req,res)=>{
-    try {
-        const pid=req.params.id;
-        const parseProduct = productValidator.parse(req.body);
-        const product = await Product.findByIdAndUpdate(pid,parseProduct,{new:true});
-        if(!product)return res.status(404).json({ message: "User not found" });
-        res.status(200).json(product);
+export const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      req.body,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Product updated successfully",
+      product: updatedProduct
+    });
+
     } catch (error) {
-        if (error instanceof z.ZodError) {
-              return res.status(400).json({ errors: error.errors });
-            }
-         res.status(500).json({message:"Error Updating products", error:error.message});
+       res.status(500).json({
+        success: false,
+        message: "Product Create failed",
+        error: error.message
+    });
     }
 }
 
@@ -64,7 +120,7 @@ export const deleteProduct= async(req,res)=>{
         const pid=req.params.id;
         const product=await Product.findByIdAndDelete(pid);
         if (!product) return res.status(404).json({ message: "product not found" });
-        res.status(200).json({ message: "User deleted successfully" });
+        res.status(200).json({ message: "Product deleted successfully" });
     } catch (error) {
         res.status(500).json({ message: "Error deleting product", error: error.message });
     }
