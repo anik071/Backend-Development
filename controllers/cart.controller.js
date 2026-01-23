@@ -78,8 +78,8 @@ export const addToCart=async (req,res)=>{
     const idx=cart.items.findIndex(
       item => item.productId.toString() === productId
     );
-        if (itemIndex > -1) {
-        cart.items[itemIndex].quantity += quantity;
+        if (idx > -1) {
+        cart.items[idx].quantity += quantity;
         }else {
         cart.items.push({ productId, quantity });
     }
@@ -177,3 +177,4 @@ export const clearCart = async (req,res)=>{
     });
     }
 }
+
