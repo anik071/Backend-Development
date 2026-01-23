@@ -5,11 +5,14 @@ import userRoute from "../backend mid/routes/user.route.js";
 import productRoute from "../backend mid/routes/product.route.js";
 import orderRoute from "../backend mid/routes/order.route.js";
 import cartRoute from "../backend mid/routes/cart.route.js";
+import cookieParser from "cookie-parser";
 
 
 const app=express();
 dotenv.config();
 app.use(express.json());
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
 app.use("/api",userRoute);
 app.use("/api",productRoute);
 app.use("/api",orderRoute);
