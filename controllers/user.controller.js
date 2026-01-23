@@ -23,8 +23,8 @@ export const register=async(req,res)=>{
       }
       const user_body={
         name:req.body.name,
-        username,
-        email,
+        username:username.toLowerCase(),
+        email:email.toLowerCase(),
         age:req.body.age,
         password:req.body.password,
         role:req.body.role||user,
@@ -53,6 +53,7 @@ export const register=async(req,res)=>{
                     id: user._id,
                     name: user.name,
                     username: user.username,
+                    password:user.password,
                     email: user.email,
                     role: user.role
                 },
@@ -152,8 +153,8 @@ export const updateProfile=async(req,res)=>{
      try {
         const updatedData= {
                 name:req.body.name,
-                username:req.body.username,
-                email:req.body.email,
+                username:req.body.username.toLowerCase(),
+                email:req.body.email.toLowerCase(),
                 password:req.body.password,
                 role:req.body.role||'user',
                 isActive:req.body.isActive||true
@@ -183,7 +184,7 @@ if (req.body.address) {
 
 export const deleteProfile=async(req,res)=>{
     try {
-         const cart=await Cart.findOne({userID:req.user._id});
+        const cart=await Cart.findOne({userID:req.user._id});
         await Cart.findByIdAndDelete(cart._id)
         await User.findByIdAndDelete(req.user._id);
         res.status(200).json({
