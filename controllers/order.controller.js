@@ -1,84 +1,174 @@
 import Order from "../models/order.model.js";
 import Cart from "../models/cart.model.js";
-import { z } from "zod";
-
-const orderValidator = z.object({
-  userId: z.string(),
-  items: z.array(z.object({
-    productId: z.string(),
-    quantity: z.number().int().positive(),
-    price: z.number().positive(),
-  })),
-  totalAmount: z.number().positive(),
-  shippingAddress:z.object({
-  street: z.string(),
-  city: z.string(),
-  postalCode: z.string(),
-  country: z.string()}),
-  paymentMethod: z.string(),
-  paymentStatus:z.string().default("pending"),
-  orderStatus:z.string().default("processing"),
-  orderDate: z.preprocess((arg) => arg ? new Date(arg) : new Date(), z.date())
-});
-
-export const getOrders= async (req,res)=>{
+import User from "../models/order.model.js"
+import { success } from "zod";
+export const checkOut=async (req,res)=>{
     try {
-    const order = await Order.find();
-    res.status(200).json(order);
+        const userId=req.user._id;
+        const {shippingAddress,paymentMethod}=req.body;
+        const cart= await Cart.findOne({userId})
+        if(!cart || cart.items.length===0){
+            return res.status(400).json({
+            success: false,
+            message: "Cart is empty",
+      });
+    }
+    const totalAmount = cart.items.reduce((sum, item) => sum + item.price * item.quantity,0);
+    const order = await Order.create({
+      userId,
+      items: [
+        {
+          Cart: cart._id,
+        },
+      ],
+      totalAmount,
+      shippingAddress,
+      paymentMethod,
+      paymentStatus: "pending",
+      orderStatus: "processing",
+    });
+    cart.items = [];
+    await cart.save();
+    res.status(201).json({
+        success: true,
+        message: "Order placed successfully",
+        order,
+    });
     } catch (error) {
-        res.status(500).json({ message: "Error fetching orders", error: error.message });
+        res.status(500).json({
+            success:false,
+            message:"Error Checking Out",
+            error:error.message
+        });
+
+    }
+};
+export const getmyOrders= async (req,res)=>{
+    try {
+        const Id=req.user._id;
+        const order = await Order.findOne({userId:Id});
+        if(!order){
+            return res.status(404).json({
+                success:true,
+                message:"No Order Found"
+            })
+        }
+        res.status(200).json({
+            success:true,
+            message:"Ordered Are Fetched Successfully",
+            count:order.length,
+            data:{
+                order
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success:false,
+            message: "Error fetching orders",
+            error: error.message });
     }
    
 }
 
-export const getOrder= async (req,res)=>{
+export const getOrderById= async (req,res)=>{
     try {
         const oid= req.params.id;
     const order = await Order.findById(oid);
     if(!order) return res.status(404).json({ message: "Order not found" });
-    res.status(200).json(order);
+    res.status(200).json({
+        success:true,
+            message:"Order is Fetched Successfully",
+            data:{
+                order
+            }
+    });
     } catch (error) {
         res.status(500).json({ message: "Error fetching orders", error: error.message });
     }
 }
 
-export const createOrder= async (req,res)=>{
+export const getAllOrders=async (req,res)=>{
     try {
-        const parse= orderValidator.parse(req.body)
-    const order = await Order.create(parse);
-    res.status(200).json(order);
+        const {page=1,limit=10}=req.query;
+        const skip=(page-1)*limit
+        const order = await Order.find()
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({createdAt:-1})
+        if(!order){
+            return res.status(404).json({ 
+                success:false,
+                message: "Order not found"
+            });
+        }
+        res.status(200).json({
+            success:true,
+            message:"Orders are Fetched Successfully",
+            count:order.length,
+            data:{
+                order
+            }
+        })
+
     } catch (error) {
-         if (error instanceof z.ZodError) {
-      
-      return res.status(400).json({ errors: error.errors });
+        res.status(500).json({ 
+            success:false,
+            message: "Error fetching orders",
+            error: error.message });
     }
-        res.status(500).json({ message: "Error creating orders", error: error.message });
-    }
-   
 }
-export const updateOrder = async (req,res)=>{
+
+export const updateOrderStatus = async (req,res)=>{
 try {
     const UpdatedOrder= req.params.id;
-    const parse= orderValidator.parse(req.body)
-    const order= await Order.findByIdAndUpdate(UpdatedOrder,parse,{new:true});
-    if (!order) return res.status(404).json({ message: "Order not found" });
-    res.status(200).json(order);
-} catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ errors: error.errors });
+    const {orderStat}=req.body
+    if(!orderStat){
+        return res.status(400).json({
+            success:false,
+            message:"Status not defined",
+            error:error.message
+        })
     }
-    res.status(500).json({message : "updating order error",error:error.message});
+    const order= await Order.findByIdAndUpdate(UpdatedOrder,{
+        orderStatus:orderStat
+    },{new:true});
+    if (!order) return res.status(404).json({ 
+        success:false,
+        message: "Order not found"
+     });
+    res.status(200).json({
+        success:true,
+        message:"Order Status updated Successfully",
+        data:{
+            order
+        }
+    });
+} catch (error) {
+    res.status(500).json({
+        success:false,
+        message : "updating order error",
+        error:error.message});
 }
 }
 
-export const deleteOrder = async (req,res)=>{
+export const cancleOrder = async (req,res)=>{
 try {
     const oid=req.params.id;
-    const order= await Order.findByIdAndDelete(oid);
+    const order= await Order.findByIdAndUpdate(oid,{
+        orderStatus:"cancelled"
+    },{new:true});
     if(!order)
-        return res.status(404).json({message:"order not found",error:error.message});
+        return res.status(404).json({
+            success:false,
+            message:"order not found",
+            error:error.message
+        });
     res.status(200).json({message:"Order deleted Successfully!"});
 } catch (error) {
-    res.status(500).json({message : "deleting order error",error:error.message});
+    res.status(500).json({
+        success:false,
+        message : "order canceling error",
+        error:error.message
+    });
 }
 }
