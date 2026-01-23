@@ -2,7 +2,7 @@ import Cart from "../models/cart.model.js";
 import Product from "../models/product.model.js"
 export const getCarts = async (req,res)=>{
 try {
-    const cart= await Cart.find();
+    const cart= await Cart.find().sort({createdAt:-1});
     res.status(200).json(cart);
 } catch (error) {
     res.status(500).json({message : "fetching carts error",error:error.message});
@@ -177,4 +177,3 @@ export const clearCart = async (req,res)=>{
     });
     }
 }
-
