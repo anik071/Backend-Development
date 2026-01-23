@@ -1,12 +1,13 @@
 import mongoose from "mongoose";
+import { required } from "zod/mini";
 
 const productSchema= new mongoose.Schema(
     {
         name:{type: String, required:true},
         price:{type:Number,required:true},
-        description:{type:String,required:false},
-        category:{type: String},
-        stock:{type: Number},
+        description:{type:String,required:true},
+        category:{type: String,required:true},
+        stock:{type: Number,default:1},
         isAvailable:{type: Boolean, default:true},
         imageUrl:{type:String},
     },{
